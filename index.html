@@ -7,31 +7,74 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .glass-effect { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        /* Barra de desplazamiento delgada para la lista */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen text-gray-100 font-sans">
+<body class="bg-[#0f172a] min-h-screen text-gray-100 font-sans">
 
-    <div class="container mx-auto px-4 py-12 max-w-3xl">
-        <div id="loginSection" class="glass-effect rounded-2xl p-8 shadow-2xl text-center text-gray-800 fade-in">
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <div id="loginSection" class="glass-effect rounded-2xl p-8 shadow-2xl text-center text-gray-800 fade-in mt-10">
             <h1 class="text-3xl font-bold mb-2">Bienvenido</h1>
-            <p class="text-gray-500 mb-6">Ingresa tu código único para ver tus proyectos y compras.</p>
-            <input type="text" id="codigoInput" placeholder="Ej. CLI-001" class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none transition mb-4 text-center text-lg font-semibold uppercase">
-            <button onclick="buscarHistorial()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 shadow-lg transform hover:-translate-y-1">
-                <i class="fas fa-search mr-2"></i> Consultar Historial
+            <p class="text-gray-500 mb-6 text-sm">Ingresa tu código único para ver tu historial.</p>
+            <input type="text" id="codigoInput" placeholder="Ej. CLI-001" class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition mb-4 text-center text-lg font-bold uppercase shadow-inner">
+            <button onclick="buscarHistorial()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg transform hover:-translate-y-0.5">
+                <i class="fas fa-search mr-2"></i> Consultar
             </button>
-            <div id="loading" class="hidden mt-4 text-blue-600 font-semibold animate-pulse">Buscando en la base de datos...</div>
+            <div id="loading" class="hidden mt-4 text-blue-600 font-semibold animate-pulse text-sm">Conectando a la base de datos...</div>
         </div>
 
         <div id="resultadosSection" class="hidden fade-in">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-2xl font-bold text-white"><i class="fas fa-clipboard-list mr-2 text-blue-400"></i> Tu Historial</h2>
-                <button onclick="salir()" class="text-sm bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-full transition shadow-lg">Cerrar Sesión</button>
+            
+            <div class="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-2xl border border-gray-700 shadow-md">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-500/20 p-2 rounded-full">
+                        <i class="fas fa-user-circle text-blue-400 text-2xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-white">Hola, <span id="nombreCliente" class="text-blue-400"></span></h2>
+                </div>
+                <button onclick="salir()" class="text-xs bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 py-1.5 px-3 rounded-lg border border-red-500/30 transition shadow-sm font-semibold">
+                    Salir
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-xl border border-gray-700 shadow-md">
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Total Acumulado</p>
+                    <p class="text-2xl font-black text-white" id="granTotal">S/ 0.00</p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-900/40 to-gray-900 p-4 rounded-xl border border-blue-800/50 shadow-md">
+                    <p class="text-[10px] text-blue-300 uppercase tracking-widest font-semibold mb-1">Subtotal Filtrado</p>
+                    <p class="text-2xl font-black text-blue-400" id="totalFiltrado">S/ 0.00</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-sm outline-none cursor-pointer">
+                    <option value="todos">📦 Todos los tipos</option>
+                    <option value="compra">🛒 Compras</option>
+                    <option value="servicio">🛠️ Servicios</option>
+                </select>
+                
+                <select id="filtroEstado" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-sm outline-none cursor-pointer">
+                    <option value="todos">📊 Todos los estados</option>
+                    <option value="completado">✅ Completados</option>
+                    <option value="pendiente">⏳ Pendientes</option>
+                    <option value="cancelado">❌ Cancelados</option>
+                </select>
+
+                <select id="filtroFecha" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-sm outline-none cursor-pointer">
+                    <option value="todos">📅 Todas las fechas</option>
+                    </select>
             </div>
             
-            <div id="listaResultados" class="space-y-4">
+            <div id="listaResultados" class="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
                 </div>
         </div>
     </div>
@@ -39,63 +82,112 @@
     <script>
         // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
         const API_URL = 'https://script.google.com/macros/s/AKfycbxBwc_dzqVKjX2UVoUP_JoXCxXVw2a8Y5VMn_s9XSDvQGvrOvJ_lD_gRW6M8hQbw59o/exec'; 
+        
+        let datosGlobales = []; // Guarda los datos para poder filtrarlos sin volver a consultar
 
         async function buscarHistorial() {
-            const codigo = document.getElementById('codigoInput').value.trim();
+            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
             if(!codigo) return alert('Por favor ingresa un código.');
 
             document.getElementById('loading').classList.remove('hidden');
             
             try {
                 const response = await fetch(`${API_URL}?codigo=${codigo}`);
-                const data = await response.json();
+                datosGlobales = await response.json();
                 
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('resultadosSection').classList.remove('hidden');
                 
-                mostrarDatos(data);
+                // Mostrar el código como nombre de usuario
+                document.getElementById('nombreCliente').innerText = codigo;
+                
+                prepararFiltros(datosGlobales);
+                aplicarFiltros(); // Esto dibuja las tarjetas y calcula totales
+
             } catch (error) {
                 alert('Hubo un error al conectar con la base de datos.');
                 document.getElementById('loading').classList.add('hidden');
             }
         }
 
-        function mostrarDatos(data) {
+        function prepararFiltros(data) {
+            const selectFecha = document.getElementById('filtroFecha');
+            selectFecha.innerHTML = '<option value="todos">📅 Todas las fechas</option>';
+            
+            // Extraer fechas únicas
+            const fechasUnicas = [...new Set(data.map(item => item.fecha))];
+            fechasUnicas.forEach(fecha => {
+                selectFecha.innerHTML += `<option value="${fecha}">📅 ${fecha}</option>`;
+            });
+        }
+
+        function aplicarFiltros() {
+            const tipo = document.getElementById('filtroTipo').value.toLowerCase();
+            const estado = document.getElementById('filtroEstado').value.toLowerCase();
+            const fecha = document.getElementById('filtroFecha').value;
+
+            // Filtrar los datos globales
+            const datosFiltrados = datosGlobales.filter(item => {
+                const coincideTipo = (tipo === 'todos' || item.tipo.toLowerCase() === tipo);
+                const coincideEstado = (estado === 'todos' || item.estado.toLowerCase() === estado);
+                const coincideFecha = (fecha === 'todos' || item.fecha === fecha);
+                return coincideTipo && coincideEstado && coincideFecha;
+            });
+
+            dibujarTarjetas(datosFiltrados);
+            actualizarTotales(datosFiltrados);
+        }
+
+        function actualizarTotales(filtrados) {
+            // Calcular total absoluto (de todo el historial)
+            const granTotal = datosGlobales.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+            // Calcular total de lo que se está viendo en pantalla (por día, por tipo, etc)
+            const totalFiltro = filtrados.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+
+            // .toFixed(2) fuerza a que siempre tenga 2 decimales
+            document.getElementById('granTotal').innerText = `S/ ${granTotal.toFixed(2)}`;
+            document.getElementById('totalFiltrado').innerText = `S/ ${totalFiltro.toFixed(2)}`;
+        }
+
+        function dibujarTarjetas(data) {
             const contenedor = document.getElementById('listaResultados');
             contenedor.innerHTML = '';
 
             if(data.length === 0) {
-                contenedor.innerHTML = '<p class="text-center text-gray-400 mt-10">No se encontraron registros para este código.</p>';
+                contenedor.innerHTML = '<div class="text-center bg-gray-800 p-6 rounded-xl border border-gray-700"><p class="text-gray-400 text-sm">No hay registros con estos filtros.</p></div>';
                 return;
             }
 
             data.forEach(item => {
                 let icono = item.tipo.toLowerCase() === 'compra' ? 'fa-shopping-cart text-purple-400' : 'fa-tools text-orange-400';
                 
-                // Asignar colores vibrantes según el estado
-                let colorEstado = 'bg-gray-500';
+                let colorEstado = 'bg-gray-600';
                 let estadoLower = item.estado.toLowerCase();
                 
-                if(['completado', 'finalizado'].includes(estadoLower)) colorEstado = 'bg-green-500';
-                if(estadoLower === 'en proceso') colorEstado = 'bg-blue-500 animate-pulse';
-                if(estadoLower === 'pendiente') colorEstado = 'bg-yellow-500';
-                if(estadoLower === 'cancelado') colorEstado = 'bg-red-500';
-                if(estadoLower === 'consignación') colorEstado = 'bg-teal-500';
+                if(['completado', 'finalizado'].includes(estadoLower)) colorEstado = 'bg-green-500/20 text-green-400 border-green-500/30';
+                if(estadoLower === 'en proceso') colorEstado = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                if(estadoLower === 'pendiente') colorEstado = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+                if(estadoLower === 'cancelado') colorEstado = 'bg-red-500/20 text-red-400 border-red-500/30';
+                if(estadoLower === 'consignación') colorEstado = 'bg-teal-500/20 text-teal-400 border-teal-500/30';
 
+                // Asegurar 2 decimales en cada tarjeta
+                const montoFormat = parseFloat(item.monto || 0).toFixed(2);
+
+                // Diseño compacto
                 const tarjeta = `
-                    <div class="bg-gray-800 rounded-xl p-6 shadow-lg border-l-4 border-gray-700 hover:border-blue-400 transition duration-300 transform hover:-translate-y-1">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center space-x-4">
-                                <div class="p-3 bg-gray-700 rounded-full"><i class="fas ${icono} text-xl"></i></div>
-                                <div>
-                                    <h3 class="text-xl font-bold text-white">${item.descripcion}</h3>
-                                    <p class="text-sm text-gray-400"><i class="far fa-calendar-alt mr-1"></i> ${item.fecha}</p>
+                    <div class="bg-gray-800 rounded-lg p-3.5 shadow-sm border border-gray-700 hover:border-gray-500 transition duration-200">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center space-x-3 truncate">
+                                <div class="p-2 bg-gray-900 rounded-lg flex-shrink-0"><i class="fas ${icono} text-sm w-4 text-center"></i></div>
+                                <div class="truncate pr-2">
+                                    <h3 class="text-sm font-bold text-gray-100 truncate">${item.descripcion}</h3>
+                                    <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt mr-1"></i> ${item.fecha}</p>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <span class="${colorEstado} text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">${item.estado}</span>
-                                <p class="mt-2 text-lg font-bold text-green-400">S/ ${item.monto}</p>
+                            <div class="text-right flex flex-col items-end flex-shrink-0">
+                                <span class="${colorEstado} border text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1">${item.estado}</span>
+                                <p class="text-sm font-black text-gray-100">S/ ${montoFormat}</p>
                             </div>
                         </div>
                     </div>
@@ -108,9 +200,13 @@
             document.getElementById('codigoInput').value = '';
             document.getElementById('resultadosSection').classList.add('hidden');
             document.getElementById('loginSection').classList.remove('hidden');
+            datosGlobales = []; // Limpiar memoria
+            
+            // Restablecer filtros a la vista por defecto
+            document.getElementById('filtroTipo').value = 'todos';
+            document.getElementById('filtroEstado').value = 'todos';
         }
     </script>
 </body>
-
 </html>
 
