@@ -6,20 +6,37 @@
     <title>Portal de Clientes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         .fade-in { animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
-        /* Barra de desplazamiento delgada para la lista */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+        
+        /* Estilo para días con compras en el calendario */
+        .dia-con-compra {
+            background-color: #3b82f6 !important;
+            color: white !important;
+            border-color: #2563eb !important;
+            font-weight: bold;
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body class="bg-[#0f172a] min-h-screen text-gray-100 font-sans">
 
-    <div class="container mx-auto px-4 py-8 max-w-2xl">
+    <div class="container mx-auto px-4 py-6 max-w-2xl">
         <div id="loginSection" class="glass-effect rounded-2xl p-8 shadow-2xl text-center text-gray-800 fade-in mt-10">
             <h1 class="text-3xl font-bold mb-2">Bienvenido</h1>
             <p class="text-gray-500 mb-6 text-sm">Ingresa tu código único para ver tu historial.</p>
@@ -44,191 +61,304 @@
                 </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-xl border border-gray-700 shadow-md">
+            <div class="grid grid-cols-2 gap-3 mb-5">
+                <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-xl border border-gray-700 shadow-md relative overflow-hidden">
                     <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-1">Total Acumulado</p>
                     <p class="text-2xl font-black text-white" id="granTotal">S/ 0.00</p>
                 </div>
-                <div class="bg-gradient-to-br from-blue-900/40 to-gray-900 p-4 rounded-xl border border-blue-800/50 shadow-md">
-                    <p class="text-[10px] text-blue-300 uppercase tracking-widest font-semibold mb-1">Subtotal Filtrado</p>
+                <div class="bg-gradient-to-br from-blue-900/40 to-gray-900 p-4 rounded-xl border border-blue-800/50 shadow-md relative overflow-hidden">
+                    <p class="text-[10px] text-blue-300 uppercase tracking-widest font-semibold mb-1">Subtotal Mostrado</p>
                     <p class="text-2xl font-black text-blue-400" id="totalFiltrado">S/ 0.00</p>
                 </div>
             </div>
 
-            <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
-                <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-sm outline-none cursor-pointer">
-                    <option value="todos">📦 Todos los tipos</option>
-                    <option value="compra">🛒 Compras</option>
-                    <option value="servicio">🛠️ Servicios</option>
-                </select>
-                
-                <select id="filtroEstado" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-sm outline-none cursor-pointer">
-                    <option value="todos">📊 Todos los estados</option>
-                    <option value="completado">✅ Completados</option>
-                    <option value="pendiente">⏳ Pendientes</option>
-                    <option value="cancelado">❌ Cancelados</option>
-                </select>
-
-                <select id="filtroFecha" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 p-2.5 shadow-sm outline-none cursor-pointer">
-                    <option value="todos">📅 Todas las fechas</option>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div class="flex flex-nowrap gap-2 overflow-x-auto pb-1 flex-grow">
+                    <select id="filtroTipo" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 px-3 py-2 shadow-sm outline-none cursor-pointer flex-shrink-0">
+                        <option value="todos">📦 Tipo</option>
+                        <option value="compra">🛒 Compras</option>
+                        <option value="servicio">🛠️ Servicios</option>
                     </select>
+                    
+                    <select id="filtroEstado" onchange="aplicarFiltros()" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 px-3 py-2 shadow-sm outline-none cursor-pointer flex-shrink-0">
+                        <option value="todos">📊 Estado</option>
+                        <option value="completado">✅ Completados</option>
+                        <option value="pendiente">⏳ Pendientes</option>
+                        <option value="cancelado">❌ Cancelados</option>
+                    </select>
+
+                    <div class="relative flex-shrink-0">
+                        <input type="text" id="filtroFecha" placeholder="📅 Fecha" class="bg-gray-800 text-xs font-semibold text-gray-200 rounded-lg border border-gray-700 focus:ring-blue-500 focus:border-blue-500 px-3 py-2 shadow-sm outline-none cursor-pointer w-28 text-center" readonly>
+                    </div>
+
+                    <button onclick="limpiarFiltros()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs py-2 px-3 rounded-lg transition shadow-sm flex-shrink-0" title="Limpiar filtros">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+
+                <button onclick="descargarPDF()" class="bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-lg border border-red-500 transition shadow-md flex items-center gap-1 flex-shrink-0">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
             </div>
             
-            <div id="listaResultados" class="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+            <div id="listaResultados" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 pb-10">
                 </div>
         </div>
     </div>
 
     <script>
-    // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
-    const API_URL = 'https://script.google.com/macros/s/AKfycbw88f10WLLMXNeZzjfZ2T9ZEwJ8hpFf_OccBq-yNK21ytKUkUslFUe9k6IKuZVhKvMv/exec'; 
-    
-    let datosGlobales = [];
-
-    async function buscarHistorial() {
-        const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
-        if(!codigo) return alert('Por favor ingresa un código.');
-
-        document.getElementById('loading').classList.remove('hidden');
+        // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw88f10WLLMXNeZzjfZ2T9ZEwJ8hpFf_OccBq-yNK21ytKUkUslFUe9k6IKuZVhKvMv/exec'; 
         
-        try {
-            const response = await fetch(`${API_URL}?codigo=${codigo}`);
-            datosGlobales = await response.json();
+        let datosGlobales = [];
+        let calendarioInstancia = null;
+        let fechasUnicasGlobales = [];
+
+        async function buscarHistorial() {
+            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+            if(!codigo) return alert('Por favor ingresa un código.');
+
+            document.getElementById('loading').classList.remove('hidden');
             
-            document.getElementById('loading').classList.add('hidden');
-            document.getElementById('loginSection').classList.add('hidden');
-            document.getElementById('resultadosSection').classList.remove('hidden');
-            
-            document.getElementById('nombreCliente').innerText = codigo;
-            
-            prepararFiltros(datosGlobales);
-            aplicarFiltros(); 
+            try {
+                const response = await fetch(`${API_URL}?codigo=${codigo}`);
+                datosGlobales = await response.json();
+                
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('resultadosSection').classList.remove('hidden');
+                
+                document.getElementById('nombreCliente').innerText = codigo;
+                
+                prepararCalendario(datosGlobales);
+                aplicarFiltros(); 
 
-        } catch (error) {
-            alert('Hubo un error al conectar con la base de datos.');
-            document.getElementById('loading').classList.add('hidden');
-        }
-    }
-
-    function prepararFiltros(data) {
-        const selectFecha = document.getElementById('filtroFecha');
-        selectFecha.innerHTML = '<option value="todos">📅 Todas las fechas</option>';
-        
-        const fechasUnicas = [...new Set(data.map(item => item.fecha))];
-        fechasUnicas.forEach(fecha => {
-            selectFecha.innerHTML += `<option value="${fecha}">📅 ${fecha}</option>`;
-        });
-    }
-
-    function aplicarFiltros() {
-        const tipo = document.getElementById('filtroTipo').value.toLowerCase();
-        const estado = document.getElementById('filtroEstado').value.toLowerCase();
-        const fecha = document.getElementById('filtroFecha').value;
-
-        const datosFiltrados = datosGlobales.filter(item => {
-            const coincideTipo = (tipo === 'todos' || item.tipo.toLowerCase() === tipo);
-            const coincideEstado = (estado === 'todos' || item.estado.toLowerCase() === estado);
-            const coincideFecha = (fecha === 'todos' || item.fecha === fecha);
-            return coincideTipo && coincideEstado && coincideFecha;
-        });
-
-        dibujarTarjetas(datosFiltrados);
-        actualizarTotales(datosFiltrados);
-    }
-
-    function actualizarTotales(filtrados) {
-        const granTotal = datosGlobales.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
-        const totalFiltro = filtrados.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
-
-        document.getElementById('granTotal').innerText = `S/ ${granTotal.toFixed(2)}`;
-        document.getElementById('totalFiltrado').innerText = `S/ ${totalFiltro.toFixed(2)}`;
-    }
-
-    function dibujarTarjetas(data) {
-        const contenedor = document.getElementById('listaResultados');
-        contenedor.innerHTML = '';
-
-        if(data.length === 0) {
-            contenedor.innerHTML = '<div class="text-center bg-gray-800 p-6 rounded-xl border border-gray-700"><p class="text-gray-400 text-sm">No hay registros con estos filtros.</p></div>';
-            return;
+            } catch (error) {
+                alert('Hubo un error al conectar con la base de datos.');
+                document.getElementById('loading').classList.add('hidden');
+            }
         }
 
-        data.forEach((item, index) => {
-            let icono = item.tipo.toLowerCase() === 'compra' ? 'fa-shopping-cart text-purple-400' : 'fa-tools text-orange-400';
+        function prepararCalendario(data) {
+            fechasUnicasGlobales = [...new Set(data.map(item => item.fecha))];
             
-            let colorEstado = 'bg-gray-600';
-            let estadoLower = item.estado.toLowerCase();
-            
-            if(['completado', 'finalizado'].includes(estadoLower)) colorEstado = 'bg-green-500/20 text-green-400 border-green-500/30';
-            if(estadoLower === 'en proceso') colorEstado = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-            if(estadoLower === 'pendiente') colorEstado = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-            if(estadoLower === 'cancelado') colorEstado = 'bg-red-500/20 text-red-400 border-red-500/30';
-            if(estadoLower === 'consignación') colorEstado = 'bg-teal-500/20 text-teal-400 border-teal-500/30';
+            if (calendarioInstancia) {
+                calendarioInstancia.destroy();
+            }
 
-            const montoFormat = parseFloat(item.monto || 0).toFixed(2);
-            // Formatear los nuevos campos
-            const costoUnitFormat = parseFloat(item.costo_unitario || 0).toFixed(2);
-            const cantidad = item.cantidad || 0;
+            // Iniciar Flatpickr con idioma español
+            calendarioInstancia = flatpickr("#filtroFecha", {
+                locale: "es",
+                dateFormat: "d/m/Y",
+                onChange: function(selectedDates, dateStr, instance) {
+                    aplicarFiltros();
+                },
+                onDayCreate: function(dObj, dStr, fp, dayElem) {
+                    // Si el día del calendario coincide con un día de compra, sombrearlo
+                    const flatDate = fp.formatDate(dayElem.dateObj, "d/m/Y");
+                    if (fechasUnicasGlobales.includes(flatDate)) {
+                        dayElem.classList.add("dia-con-compra");
+                    }
+                }
+            });
+        }
 
-            // Identificadores únicos para el efecto de abrir/cerrar
-            const tarjetaId = `detalle-${index}`;
-            const iconoId = `icono-${index}`;
+        function limpiarFiltros() {
+            document.getElementById('filtroTipo').value = 'todos';
+            document.getElementById('filtroEstado').value = 'todos';
+            calendarioInstancia.clear(); // Limpia la fecha seleccionada
+            aplicarFiltros();
+        }
 
-            const tarjeta = `
-                <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 hover:border-blue-500/50 transition duration-200 overflow-hidden cursor-pointer" onclick="toggleDetalle('${tarjetaId}', '${iconoId}')">
-                    <div class="p-3.5 flex justify-between items-center">
-                        <div class="flex items-center space-x-3 truncate">
-                            <div class="p-2 bg-gray-900 rounded-lg flex-shrink-0"><i class="fas ${icono} text-sm w-4 text-center"></i></div>
-                            <div class="truncate pr-2">
-                                <h3 class="text-sm font-bold text-gray-100 truncate">${item.descripcion}</h3>
-                                <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt mr-1"></i> ${item.fecha}</p>
-                            </div>
-                        </div>
-                        <div class="text-right flex flex-col items-end flex-shrink-0">
-                            <span class="${colorEstado} border text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1">${item.estado}</span>
-                            <div class="flex items-center space-x-2">
-                                <p class="text-sm font-black text-gray-100">S/ ${montoFormat}</p>
-                                <i id="${iconoId}" class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-300"></i>
-                            </div>
-                        </div>
+        function aplicarFiltros() {
+            const tipo = document.getElementById('filtroTipo').value.toLowerCase();
+            const estado = document.getElementById('filtroEstado').value.toLowerCase();
+            const fecha = document.getElementById('filtroFecha').value;
+
+            const datosFiltrados = datosGlobales.filter(item => {
+                const coincideTipo = (tipo === 'todos' || item.tipo.toLowerCase() === tipo);
+                const coincideEstado = (estado === 'todos' || item.estado.toLowerCase() === estado);
+                const coincideFecha = (!fecha || item.fecha === fecha);
+                return coincideTipo && coincideEstado && coincideFecha;
+            });
+
+            dibujarTarjetas(datosFiltrados);
+            actualizarTotales(datosFiltrados);
+        }
+
+        function actualizarTotales(filtrados) {
+            const granTotal = datosGlobales.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+            const totalFiltro = filtrados.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+
+            document.getElementById('granTotal').innerText = `S/ ${granTotal.toFixed(2)}`;
+            document.getElementById('totalFiltrado').innerText = `S/ ${totalFiltro.toFixed(2)}`;
+        }
+
+        function dibujarTarjetas(data) {
+            const contenedor = document.getElementById('listaResultados');
+            contenedor.innerHTML = '';
+
+            if(data.length === 0) {
+                contenedor.innerHTML = '<div class="text-center bg-gray-800 p-6 rounded-xl border border-gray-700 mt-4"><p class="text-gray-400 text-sm">No hay registros con estos filtros.</p></div>';
+                return;
+            }
+
+            // 1. ORDENAR por fecha (más reciente primero)
+            const datosOrdenados = [...data].sort((a, b) => {
+                const dateA = new Date(a.fecha.split('/').reverse().join('-'));
+                const dateB = new Date(b.fecha.split('/').reverse().join('-'));
+                return dateB - dateA;
+            });
+
+            // 2. AGRUPAR por fecha
+            const grupos = datosOrdenados.reduce((acc, item) => {
+                if (!acc[item.fecha]) acc[item.fecha] = [];
+                acc[item.fecha].push(item);
+                return acc;
+            }, {});
+
+            // 3. DIBUJAR en pantalla
+            let idGlobal = 0; // Para asegurar IDs únicos en los acordeones
+            for (const [fecha, items] of Object.entries(grupos)) {
+                
+                // Cabecera unificadora de la fecha
+                contenedor.innerHTML += `
+                    <div class="sticky top-0 z-10 bg-[#0f172a] pt-3 pb-1 border-b border-gray-700/50">
+                        <h4 class="text-blue-400 font-bold text-xs uppercase tracking-wider"><i class="far fa-calendar-alt mr-2"></i>${fecha}</h4>
                     </div>
+                    <div class="space-y-2 mb-4">
+                `;
+
+                let tarjetasHTML = '';
+                items.forEach((item) => {
+                    let icono = item.tipo.toLowerCase() === 'compra' ? 'fa-shopping-cart text-purple-400' : 'fa-tools text-orange-400';
                     
-                    <div id="${tarjetaId}" class="hidden bg-gray-900/60 px-4 py-3 border-t border-gray-700/50 text-xs">
-                        <div class="flex justify-between items-center">
-                            <div class="text-gray-300"><span class="font-semibold text-gray-500">Cantidad:</span> <span class="text-blue-400 font-bold">${cantidad}</span></div>
-                            <div class="text-gray-300"><span class="font-semibold text-gray-500">Costo Unitario:</span> <span class="text-blue-400 font-bold">S/ ${costoUnitFormat}</span></div>
+                    let colorEstado = 'bg-gray-600';
+                    let estadoLower = item.estado.toLowerCase();
+                    if(['completado', 'finalizado'].includes(estadoLower)) colorEstado = 'bg-green-500/20 text-green-400 border-green-500/30';
+                    if(estadoLower === 'en proceso') colorEstado = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+                    if(estadoLower === 'pendiente') colorEstado = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+                    if(estadoLower === 'cancelado') colorEstado = 'bg-red-500/20 text-red-400 border-red-500/30';
+                    if(estadoLower === 'consignación') colorEstado = 'bg-teal-500/20 text-teal-400 border-teal-500/30';
+
+                    const montoFormat = parseFloat(item.monto || 0).toFixed(2);
+                    const costoUnitFormat = parseFloat(item.costo_unitario || 0).toFixed(2);
+                    const cantidad = item.cantidad || 0;
+
+                    const tarjetaId = `detalle-${idGlobal}`;
+                    const iconoId = `icono-${idGlobal}`;
+                    idGlobal++;
+
+                    tarjetasHTML += `
+                        <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 hover:border-blue-500/50 transition duration-200 overflow-hidden cursor-pointer" onclick="toggleDetalle('${tarjetaId}', '${iconoId}')">
+                            <div class="p-3.5 flex justify-between items-center">
+                                <div class="flex items-center space-x-3 truncate">
+                                    <div class="p-2 bg-gray-900 rounded-lg flex-shrink-0"><i class="fas ${icono} text-sm w-4 text-center"></i></div>
+                                    <div class="truncate pr-2">
+                                        <h3 class="text-sm font-bold text-gray-100 truncate">${item.descripcion}</h3>
+                                    </div>
+                                </div>
+                                <div class="text-right flex flex-col items-end flex-shrink-0">
+                                    <span class="${colorEstado} border text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1">${item.estado}</span>
+                                    <div class="flex items-center space-x-2">
+                                        <p class="text-sm font-black text-gray-100">S/ ${montoFormat}</p>
+                                        <i id="${iconoId}" class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="${tarjetaId}" class="hidden bg-gray-900/60 px-4 py-3 border-t border-gray-700/50 text-xs">
+                                <div class="flex justify-between items-center">
+                                    <div class="text-gray-300"><span class="font-semibold text-gray-500">Cantidad:</span> <span class="text-blue-400 font-bold">${cantidad}</span></div>
+                                    <div class="text-gray-300"><span class="font-semibold text-gray-500">Costo Unit:</span> <span class="text-blue-400 font-bold">S/ ${costoUnitFormat}</span></div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            `;
-            contenedor.innerHTML += tarjeta;
-        });
-    }
-
-    // Función para mostrar/ocultar el detalle y girar la flecha
-    function toggleDetalle(tarjetaId, iconoId) {
-        const detalle = document.getElementById(tarjetaId);
-        const icono = document.getElementById(iconoId);
-        
-        if (detalle.classList.contains('hidden')) {
-            detalle.classList.remove('hidden');
-            icono.classList.add('rotate-180');
-        } else {
-            detalle.classList.add('hidden');
-            icono.classList.remove('rotate-180');
+                    `;
+                });
+                contenedor.innerHTML += tarjetasHTML + `</div>`;
+            }
         }
-    }
 
-    function salir() {
-        document.getElementById('codigoInput').value = '';
-        document.getElementById('resultadosSection').classList.add('hidden');
-        document.getElementById('loginSection').classList.remove('hidden');
-        datosGlobales = []; 
-        document.getElementById('filtroTipo').value = 'todos';
-        document.getElementById('filtroEstado').value = 'todos';
-    }
-</script>
+        function toggleDetalle(tarjetaId, iconoId) {
+            const detalle = document.getElementById(tarjetaId);
+            const icono = document.getElementById(iconoId);
+            
+            if (detalle.classList.contains('hidden')) {
+                detalle.classList.remove('hidden');
+                icono.classList.add('rotate-180');
+            } else {
+                detalle.classList.add('hidden');
+                icono.classList.remove('rotate-180');
+            }
+        }
+
+        function descargarPDF() {
+            if(datosGlobales.length === 0) return alert("No hay datos para exportar.");
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+            
+            // Configurar estilos de fuente para el título
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            doc.text("Historial de Compras y Servicios", 14, 20);
+            
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Cliente ID: ${codigo}`, 14, 28);
+            doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-ES')}`, 14, 34);
+
+            // Obtener datos que están viéndose en pantalla ahora mismo (filtrados)
+            const tipo = document.getElementById('filtroTipo').value.toLowerCase();
+            const estado = document.getElementById('filtroEstado').value.toLowerCase();
+            const fecha = document.getElementById('filtroFecha').value;
+
+            const datosParaExportar = datosGlobales.filter(item => {
+                const coincideTipo = (tipo === 'todos' || item.tipo.toLowerCase() === tipo);
+                const coincideEstado = (estado === 'todos' || item.estado.toLowerCase() === estado);
+                const coincideFecha = (!fecha || item.fecha === fecha);
+                return coincideTipo && coincideEstado && coincideFecha;
+            });
+
+            // Preparar tabla
+            const columnas = ["Fecha", "Tipo", "Descripción", "Estado", "Cant.", "P. Unit", "Total"];
+            const filas = datosParaExportar.map(item => [
+                item.fecha,
+                item.tipo.toUpperCase(),
+                item.descripcion,
+                item.estado.toUpperCase(),
+                item.cantidad || "-",
+                `S/ ${parseFloat(item.costo_unitario || 0).toFixed(2)}`,
+                `S/ ${parseFloat(item.monto || 0).toFixed(2)}`
+            ]);
+
+            doc.autoTable({
+                startY: 40,
+                head: [columnas],
+                body: filas,
+                theme: 'grid',
+                headStyles: { fillColor: [30, 64, 175], textColor: 255 }, // Azul de Tailwind
+                alternateRowStyles: { fillColor: [240, 240, 240] },
+                styles: { fontSize: 9, cellPadding: 3 },
+                columnStyles: {
+                    4: { halign: 'center' },
+                    5: { halign: 'right' },
+                    6: { halign: 'right', fontStyle: 'bold' }
+                }
+            });
+
+            // Guardar documento
+            doc.save(`Reporte_${codigo}.pdf`);
+        }
+
+        function salir() {
+            document.getElementById('codigoInput').value = '';
+            document.getElementById('resultadosSection').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            datosGlobales = []; 
+            limpiarFiltros();
+        }
+    </script>
 </body>
 </html>
-
-
