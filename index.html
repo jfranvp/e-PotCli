@@ -80,133 +80,155 @@
     </div>
 
     <script>
-        // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxBwc_dzqVKjX2UVoUP_JoXCxXVw2a8Y5VMn_s9XSDvQGvrOvJ_lD_gRW6M8hQbw59o/exec'; 
+    // PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT
+    const API_URL = 'https://script.google.com/macros/s/AKfycbw88f10WLLMXNeZzjfZ2T9ZEwJ8hpFf_OccBq-yNK21ytKUkUslFUe9k6IKuZVhKvMv/exec'; 
+    
+    let datosGlobales = [];
+
+    async function buscarHistorial() {
+        const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
+        if(!codigo) return alert('Por favor ingresa un código.');
+
+        document.getElementById('loading').classList.remove('hidden');
         
-        let datosGlobales = []; // Guarda los datos para poder filtrarlos sin volver a consultar
-
-        async function buscarHistorial() {
-            const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
-            if(!codigo) return alert('Por favor ingresa un código.');
-
-            document.getElementById('loading').classList.remove('hidden');
+        try {
+            const response = await fetch(`${API_URL}?codigo=${codigo}`);
+            datosGlobales = await response.json();
             
-            try {
-                const response = await fetch(`${API_URL}?codigo=${codigo}`);
-                datosGlobales = await response.json();
-                
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('loginSection').classList.add('hidden');
-                document.getElementById('resultadosSection').classList.remove('hidden');
-                
-                // Mostrar el código como nombre de usuario
-                document.getElementById('nombreCliente').innerText = codigo;
-                
-                prepararFiltros(datosGlobales);
-                aplicarFiltros(); // Esto dibuja las tarjetas y calcula totales
-
-            } catch (error) {
-                alert('Hubo un error al conectar con la base de datos.');
-                document.getElementById('loading').classList.add('hidden');
-            }
-        }
-
-        function prepararFiltros(data) {
-            const selectFecha = document.getElementById('filtroFecha');
-            selectFecha.innerHTML = '<option value="todos">📅 Todas las fechas</option>';
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('resultadosSection').classList.remove('hidden');
             
-            // Extraer fechas únicas
-            const fechasUnicas = [...new Set(data.map(item => item.fecha))];
-            fechasUnicas.forEach(fecha => {
-                selectFecha.innerHTML += `<option value="${fecha}">📅 ${fecha}</option>`;
-            });
+            document.getElementById('nombreCliente').innerText = codigo;
+            
+            prepararFiltros(datosGlobales);
+            aplicarFiltros(); 
+
+        } catch (error) {
+            alert('Hubo un error al conectar con la base de datos.');
+            document.getElementById('loading').classList.add('hidden');
+        }
+    }
+
+    function prepararFiltros(data) {
+        const selectFecha = document.getElementById('filtroFecha');
+        selectFecha.innerHTML = '<option value="todos">📅 Todas las fechas</option>';
+        
+        const fechasUnicas = [...new Set(data.map(item => item.fecha))];
+        fechasUnicas.forEach(fecha => {
+            selectFecha.innerHTML += `<option value="${fecha}">📅 ${fecha}</option>`;
+        });
+    }
+
+    function aplicarFiltros() {
+        const tipo = document.getElementById('filtroTipo').value.toLowerCase();
+        const estado = document.getElementById('filtroEstado').value.toLowerCase();
+        const fecha = document.getElementById('filtroFecha').value;
+
+        const datosFiltrados = datosGlobales.filter(item => {
+            const coincideTipo = (tipo === 'todos' || item.tipo.toLowerCase() === tipo);
+            const coincideEstado = (estado === 'todos' || item.estado.toLowerCase() === estado);
+            const coincideFecha = (fecha === 'todos' || item.fecha === fecha);
+            return coincideTipo && coincideEstado && coincideFecha;
+        });
+
+        dibujarTarjetas(datosFiltrados);
+        actualizarTotales(datosFiltrados);
+    }
+
+    function actualizarTotales(filtrados) {
+        const granTotal = datosGlobales.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+        const totalFiltro = filtrados.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+
+        document.getElementById('granTotal').innerText = `S/ ${granTotal.toFixed(2)}`;
+        document.getElementById('totalFiltrado').innerText = `S/ ${totalFiltro.toFixed(2)}`;
+    }
+
+    function dibujarTarjetas(data) {
+        const contenedor = document.getElementById('listaResultados');
+        contenedor.innerHTML = '';
+
+        if(data.length === 0) {
+            contenedor.innerHTML = '<div class="text-center bg-gray-800 p-6 rounded-xl border border-gray-700"><p class="text-gray-400 text-sm">No hay registros con estos filtros.</p></div>';
+            return;
         }
 
-        function aplicarFiltros() {
-            const tipo = document.getElementById('filtroTipo').value.toLowerCase();
-            const estado = document.getElementById('filtroEstado').value.toLowerCase();
-            const fecha = document.getElementById('filtroFecha').value;
+        data.forEach((item, index) => {
+            let icono = item.tipo.toLowerCase() === 'compra' ? 'fa-shopping-cart text-purple-400' : 'fa-tools text-orange-400';
+            
+            let colorEstado = 'bg-gray-600';
+            let estadoLower = item.estado.toLowerCase();
+            
+            if(['completado', 'finalizado'].includes(estadoLower)) colorEstado = 'bg-green-500/20 text-green-400 border-green-500/30';
+            if(estadoLower === 'en proceso') colorEstado = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+            if(estadoLower === 'pendiente') colorEstado = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+            if(estadoLower === 'cancelado') colorEstado = 'bg-red-500/20 text-red-400 border-red-500/30';
+            if(estadoLower === 'consignación') colorEstado = 'bg-teal-500/20 text-teal-400 border-teal-500/30';
 
-            // Filtrar los datos globales
-            const datosFiltrados = datosGlobales.filter(item => {
-                const coincideTipo = (tipo === 'todos' || item.tipo.toLowerCase() === tipo);
-                const coincideEstado = (estado === 'todos' || item.estado.toLowerCase() === estado);
-                const coincideFecha = (fecha === 'todos' || item.fecha === fecha);
-                return coincideTipo && coincideEstado && coincideFecha;
-            });
+            const montoFormat = parseFloat(item.monto || 0).toFixed(2);
+            // Formatear los nuevos campos
+            const costoUnitFormat = parseFloat(item.costo_unitario || 0).toFixed(2);
+            const cantidad = item.cantidad || 0;
 
-            dibujarTarjetas(datosFiltrados);
-            actualizarTotales(datosFiltrados);
-        }
+            // Identificadores únicos para el efecto de abrir/cerrar
+            const tarjetaId = `detalle-${index}`;
+            const iconoId = `icono-${index}`;
 
-        function actualizarTotales(filtrados) {
-            // Calcular total absoluto (de todo el historial)
-            const granTotal = datosGlobales.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
-            // Calcular total de lo que se está viendo en pantalla (por día, por tipo, etc)
-            const totalFiltro = filtrados.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
-
-            // .toFixed(2) fuerza a que siempre tenga 2 decimales
-            document.getElementById('granTotal').innerText = `S/ ${granTotal.toFixed(2)}`;
-            document.getElementById('totalFiltrado').innerText = `S/ ${totalFiltro.toFixed(2)}`;
-        }
-
-        function dibujarTarjetas(data) {
-            const contenedor = document.getElementById('listaResultados');
-            contenedor.innerHTML = '';
-
-            if(data.length === 0) {
-                contenedor.innerHTML = '<div class="text-center bg-gray-800 p-6 rounded-xl border border-gray-700"><p class="text-gray-400 text-sm">No hay registros con estos filtros.</p></div>';
-                return;
-            }
-
-            data.forEach(item => {
-                let icono = item.tipo.toLowerCase() === 'compra' ? 'fa-shopping-cart text-purple-400' : 'fa-tools text-orange-400';
-                
-                let colorEstado = 'bg-gray-600';
-                let estadoLower = item.estado.toLowerCase();
-                
-                if(['completado', 'finalizado'].includes(estadoLower)) colorEstado = 'bg-green-500/20 text-green-400 border-green-500/30';
-                if(estadoLower === 'en proceso') colorEstado = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-                if(estadoLower === 'pendiente') colorEstado = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-                if(estadoLower === 'cancelado') colorEstado = 'bg-red-500/20 text-red-400 border-red-500/30';
-                if(estadoLower === 'consignación') colorEstado = 'bg-teal-500/20 text-teal-400 border-teal-500/30';
-
-                // Asegurar 2 decimales en cada tarjeta
-                const montoFormat = parseFloat(item.monto || 0).toFixed(2);
-
-                // Diseño compacto
-                const tarjeta = `
-                    <div class="bg-gray-800 rounded-lg p-3.5 shadow-sm border border-gray-700 hover:border-gray-500 transition duration-200">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center space-x-3 truncate">
-                                <div class="p-2 bg-gray-900 rounded-lg flex-shrink-0"><i class="fas ${icono} text-sm w-4 text-center"></i></div>
-                                <div class="truncate pr-2">
-                                    <h3 class="text-sm font-bold text-gray-100 truncate">${item.descripcion}</h3>
-                                    <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt mr-1"></i> ${item.fecha}</p>
-                                </div>
+            const tarjeta = `
+                <div class="bg-gray-800 rounded-lg shadow-sm border border-gray-700 hover:border-blue-500/50 transition duration-200 overflow-hidden cursor-pointer" onclick="toggleDetalle('${tarjetaId}', '${iconoId}')">
+                    <div class="p-3.5 flex justify-between items-center">
+                        <div class="flex items-center space-x-3 truncate">
+                            <div class="p-2 bg-gray-900 rounded-lg flex-shrink-0"><i class="fas ${icono} text-sm w-4 text-center"></i></div>
+                            <div class="truncate pr-2">
+                                <h3 class="text-sm font-bold text-gray-100 truncate">${item.descripcion}</h3>
+                                <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt mr-1"></i> ${item.fecha}</p>
                             </div>
-                            <div class="text-right flex flex-col items-end flex-shrink-0">
-                                <span class="${colorEstado} border text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1">${item.estado}</span>
+                        </div>
+                        <div class="text-right flex flex-col items-end flex-shrink-0">
+                            <span class="${colorEstado} border text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1">${item.estado}</span>
+                            <div class="flex items-center space-x-2">
                                 <p class="text-sm font-black text-gray-100">S/ ${montoFormat}</p>
+                                <i id="${iconoId}" class="fas fa-chevron-down text-gray-500 text-xs transition-transform duration-300"></i>
                             </div>
                         </div>
                     </div>
-                `;
-                contenedor.innerHTML += tarjeta;
-            });
-        }
+                    
+                    <div id="${tarjetaId}" class="hidden bg-gray-900/60 px-4 py-3 border-t border-gray-700/50 text-xs">
+                        <div class="flex justify-between items-center">
+                            <div class="text-gray-300"><span class="font-semibold text-gray-500">Cantidad:</span> <span class="text-blue-400 font-bold">${cantidad}</span></div>
+                            <div class="text-gray-300"><span class="font-semibold text-gray-500">Costo Unitario:</span> <span class="text-blue-400 font-bold">S/ ${costoUnitFormat}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            contenedor.innerHTML += tarjeta;
+        });
+    }
 
-        function salir() {
-            document.getElementById('codigoInput').value = '';
-            document.getElementById('resultadosSection').classList.add('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-            datosGlobales = []; // Limpiar memoria
-            
-            // Restablecer filtros a la vista por defecto
-            document.getElementById('filtroTipo').value = 'todos';
-            document.getElementById('filtroEstado').value = 'todos';
+    // Función para mostrar/ocultar el detalle y girar la flecha
+    function toggleDetalle(tarjetaId, iconoId) {
+        const detalle = document.getElementById(tarjetaId);
+        const icono = document.getElementById(iconoId);
+        
+        if (detalle.classList.contains('hidden')) {
+            detalle.classList.remove('hidden');
+            icono.classList.add('rotate-180');
+        } else {
+            detalle.classList.add('hidden');
+            icono.classList.remove('rotate-180');
         }
-    </script>
+    }
+
+    function salir() {
+        document.getElementById('codigoInput').value = '';
+        document.getElementById('resultadosSection').classList.add('hidden');
+        document.getElementById('loginSection').classList.remove('hidden');
+        datosGlobales = []; 
+        document.getElementById('filtroTipo').value = 'todos';
+        document.getElementById('filtroEstado').value = 'todos';
+    }
+</script>
 </body>
 </html>
+
 
