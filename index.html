@@ -146,15 +146,14 @@
                 calendarioInstancia.destroy();
             }
 
-            // Iniciar Flatpickr con idioma español
             calendarioInstancia = flatpickr("#filtroFecha", {
                 locale: "es",
                 dateFormat: "d/m/Y",
+                disableMobile: true, // <--- LA MAGIA: Obliga al diseño custom en celulares
                 onChange: function(selectedDates, dateStr, instance) {
                     aplicarFiltros();
                 },
                 onDayCreate: function(dObj, dStr, fp, dayElem) {
-                    // Si el día del calendario coincide con un día de compra, sombrearlo
                     const flatDate = fp.formatDate(dayElem.dateObj, "d/m/Y");
                     if (fechasUnicasGlobales.includes(flatDate)) {
                         dayElem.classList.add("dia-con-compra");
@@ -166,7 +165,7 @@
         function limpiarFiltros() {
             document.getElementById('filtroTipo').value = 'todos';
             document.getElementById('filtroEstado').value = 'todos';
-            calendarioInstancia.clear(); // Limpia la fecha seleccionada
+            calendarioInstancia.clear(); 
             aplicarFiltros();
         }
 
@@ -203,25 +202,21 @@
                 return;
             }
 
-            // 1. ORDENAR por fecha (más reciente primero)
             const datosOrdenados = [...data].sort((a, b) => {
                 const dateA = new Date(a.fecha.split('/').reverse().join('-'));
                 const dateB = new Date(b.fecha.split('/').reverse().join('-'));
                 return dateB - dateA;
             });
 
-            // 2. AGRUPAR por fecha
             const grupos = datosOrdenados.reduce((acc, item) => {
                 if (!acc[item.fecha]) acc[item.fecha] = [];
                 acc[item.fecha].push(item);
                 return acc;
             }, {});
 
-            // 3. DIBUJAR en pantalla
-            let idGlobal = 0; // Para asegurar IDs únicos en los acordeones
+            let idGlobal = 0; 
             for (const [fecha, items] of Object.entries(grupos)) {
                 
-                // Cabecera unificadora de la fecha
                 contenedor.innerHTML += `
                     <div class="sticky top-0 z-10 bg-[#0f172a] pt-3 pb-1 border-b border-gray-700/50">
                         <h4 class="text-blue-400 font-bold text-xs uppercase tracking-wider"><i class="far fa-calendar-alt mr-2"></i>${fecha}</h4>
@@ -299,7 +294,6 @@
             const doc = new jsPDF('p', 'mm', 'a4');
             const codigo = document.getElementById('codigoInput').value.trim().toUpperCase();
             
-            // Configurar estilos de fuente para el título
             doc.setFont("helvetica", "bold");
             doc.setFontSize(18);
             doc.text("Historial de Compras y Servicios", 14, 20);
@@ -309,7 +303,6 @@
             doc.text(`Cliente ID: ${codigo}`, 14, 28);
             doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-ES')}`, 14, 34);
 
-            // Obtener datos que están viéndose en pantalla ahora mismo (filtrados)
             const tipo = document.getElementById('filtroTipo').value.toLowerCase();
             const estado = document.getElementById('filtroEstado').value.toLowerCase();
             const fecha = document.getElementById('filtroFecha').value;
@@ -321,7 +314,9 @@
                 return coincideTipo && coincideEstado && coincideFecha;
             });
 
-            // Preparar tabla
+            // Suma del total filtrado para el pie de página
+            const totalFiltroExportar = datosParaExportar.reduce((suma, item) => suma + parseFloat(item.monto || 0), 0);
+
             const columnas = ["Fecha", "Tipo", "Descripción", "Estado", "Cant.", "P. Unit", "Total"];
             const filas = datosParaExportar.map(item => [
                 item.fecha,
@@ -337,9 +332,13 @@
                 startY: 40,
                 head: [columnas],
                 body: filas,
+                foot: [[
+                    { content: 'TOTAL:', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [240, 240, 240], textColor: [0, 0, 0] } },
+                    { content: `S/ ${totalFiltroExportar.toFixed(2)}`, styles: { halign: 'right', fontStyle: 'bold', fillColor: [30, 64, 175], textColor: 255 } }
+                ]],
                 theme: 'grid',
-                headStyles: { fillColor: [30, 64, 175], textColor: 255 }, // Azul de Tailwind
-                alternateRowStyles: { fillColor: [240, 240, 240] },
+                headStyles: { fillColor: [30, 64, 175], textColor: 255 }, 
+                alternateRowStyles: { fillColor: [245, 245, 245] },
                 styles: { fontSize: 9, cellPadding: 3 },
                 columnStyles: {
                     4: { halign: 'center' },
@@ -348,7 +347,6 @@
                 }
             });
 
-            // Guardar documento
             doc.save(`Reporte_${codigo}.pdf`);
         }
 
